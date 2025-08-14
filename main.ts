@@ -94,83 +94,7 @@ export const DEFAULTS: SecureSettings = {
 // Generic error message for user-facing errors
 const GENERIC_ERROR_MSG = 'Operation failed. Please check the console for details.';
 
-class PasswordPromptModal extends Modal {
-    result: string;
-    onSubmit: (result: string) => void;
-
-    constructor(app: App, onSubmit: (result: string) => void) {
-        super(app);
-        this.onSubmit = onSubmit;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.createEl("h2", { text: "Enter Password" });
-
-        const form = contentEl.createEl("form");
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            this.close();
-            this.onSubmit(this.result);
-        };
-
-        new Setting(form)
-            .setName("Password")
-            .setDesc("Required for the operation.")
-            .addText((text) => {
-                text.inputEl.type = 'password';
-                text.onChange((value) => { this.result = value; });
-                text.inputEl.focus();
-            });
-
-        new Setting(form)
-            .addButton((btn) =>
-                btn
-                    .setButtonText("Submit")
-                    .setCta()
-                    .onClick(() => {
-                        this.close();
-                        this.onSubmit(this.result);
-                    }));
-    }
-
-    onClose() {
-        let { contentEl } = this;
-        contentEl.empty();
-    }
-
-    // --- FUNCTION TO LOAD STYLESHEET ---
-  async loadStylesheet(): Promise<void> {
-    try {
-      const plugin = this.app.plugins.getPlugin('secure-blocks');
-      if (!plugin) {
-        console.error('Could not find plugin instance');
-        return;
-      }
-      const manifest = (plugin as any).manifest;
-      if (!manifest) {
-        console.error('Could not find plugin manifest');
-        return;
-      }
-      const cssPath = `${manifest.dir}/styles.css`;
-      const css = await this.app.vault.adapter.read(cssPath);
-      const styleEl = document.createElement('style');
-      styleEl.id = `secure-blocks-styles`;
-      styleEl.textContent = css;
-      document.head.appendChild(styleEl);
-    } catch (e) {
-      console.error('Failed to load styles:', e);
-    }
-  }
-
-  onunload() {
-    // Clean up stylesheet on unload
-    const styleEl = document.getElementById(`secure-blocks-styles`);
-    if (styleEl) {
-      styleEl.remove();
-    }
-  }
-}
+// Password prompt functionality moved to PasswordService
 
 export default class MySecurePlugin extends Plugin {
   settings: SecureSettings;
@@ -283,41 +207,14 @@ export default class MySecurePlugin extends Plugin {
             return;
         }
 
-        let pwd = await this.promptPassword();
+        let pwd = await this.passwordService.promptPassword();
         if (!pwd) {
             new Notice('Operation cancelled: Password is required.');
             return;
         }
 
         try {
-            if (isEncryptedBlock(fileContent.trim())) {
-                const plainText = await decryptText(fileContent.trim(), pwd, this.settings.iterations);
-                pwd = null;
-                
-                const cm6 = (editor as any).cm as EditorView;
-                if (cm6) {
-                    cm6.dispatch({
-                        effects: this.editorLock.reconfigure(EditorState.readOnly.of(false))
-                    });
-                }
-                
-                editor.setValue(plainText);
-                new Notice('File decrypted successfully.');
-            } else {
-                const encryptedFile = await encryptText(fileContent, pwd, { 
-                    iterations: this.settings.iterations 
-                });
-                pwd = null;
-                
-                // Unlock editor before setting content
-                const cm6 = (editor as any).cm as EditorView;
-                if (cm6) {
-                    cm6.dispatch({ effects: this.editorLock.reconfigure(EditorState.readOnly.of(false)) });
-                }
-                
-                editor.setValue(encryptedFile);
-                new Notice('File encrypted successfully.');
-            }
+            await this.handleFileEncryption(editor, fileContent, pwd);
         } catch (e: any) {
             new Notice(`Operation failed: ${e.message ?? 'Incorrect password or corrupted data.'}`);
         } finally {
@@ -346,7 +243,7 @@ export default class MySecurePlugin extends Plugin {
         if (selection) {
             if (isEncryptedBlock(selection.trim())) {
                 // DECRYPT SELECTION
-                let pwd = await this.promptPassword();
+                let pwd = await this.passwordService.promptPassword();
                 if (!pwd) return;
                 const plain = await decryptText(selection.trim(), pwd, this.settings.iterations);
                 pwd = null;
@@ -363,7 +260,7 @@ export default class MySecurePlugin extends Plugin {
                 setTimeout(() => this.checkAndUpdateLockState(editor), 0);
             } else {
                 // ENCRYPT SELECTION
-                let pwd = await this.promptPassword();
+                let pwd = await this.passwordService.promptPassword();
                 if (!pwd) return;
                 const encryptedBlock = await encryptText(selection, pwd, { iterations: this.settings.iterations });
                 pwd = null;
@@ -377,7 +274,7 @@ export default class MySecurePlugin extends Plugin {
             const blockRange = getBlockRange(editor.getValue(), cursorOffset, cursorOffset);
             if (blockRange) {
                 // DECRYPT BLOCK BY CURSOR POSITION
-                let pwd = await this.promptPassword();
+                let pwd = await this.passwordService.promptPassword();
                 if (!pwd) return;
                 const plain = await decryptText(blockRange.block, pwd, this.settings.iterations);
                 pwd = null;
@@ -399,37 +296,10 @@ export default class MySecurePlugin extends Plugin {
                     return;
                 }
 
-                let pwd = await this.promptPassword();
+                let pwd = await this.passwordService.promptPassword();
                 if (!pwd) return;
 
-                if (isEncryptedBlock(fileContent.trim())) {
-                    // DECRYPT ENTIRE FILE
-                    const plainText = await decryptText(fileContent.trim(), pwd, this.settings.iterations);
-                    pwd = null;
-                    
-                    // Unlock editor before setting content
-                    // Check lock state and unlock for content update
-                    this.checkAndUpdateLockState(editor, false);
-                    
-                    editor.setValue(plainText);
-                    new Notice('File decrypted successfully.');
-                    
-                    // Update lock state after content change
-                    setTimeout(() => this.checkAndUpdateLockState(editor), 0);
-                } else {
-                    // ENCRYPT ENTIRE FILE
-                    const encryptedFile = await encryptText(fileContent, pwd, { iterations: this.settings.iterations });
-                    pwd = null;
-                    
-                    // Unlock editor before setting content
-                    const cm6 = (editor as any).cm as EditorView;
-                    if (cm6) {
-                        cm6.dispatch({ effects: this.editorLock.reconfigure(EditorState.readOnly.of(false)) });
-                    }
-                    
-                    editor.setValue(encryptedFile);
-                    new Notice('File encrypted successfully.');
-                }
+                await this.handleFileEncryption(editor, fileContent, pwd);
             }
         }
     } catch (e: any) {
@@ -456,11 +326,36 @@ export default class MySecurePlugin extends Plugin {
     await this.saveData(settingsToSave);
   }
 
-  async promptPassword(): Promise<string | null> {
-    return new Promise((resolve) => {
-        new PasswordPromptModal(this.app, (result) => {
-            resolve(result || null);
-        }).open();
-    });
+  /**
+   * Helper function to handle file-level encryption/decryption
+   */
+  private async handleFileEncryption(editor: Editor, fileContent: string, password: string): Promise<void> {
+    if (isEncryptedBlock(fileContent.trim())) {
+        // DECRYPT ENTIRE FILE
+        const plainText = await decryptText(fileContent.trim(), password, this.settings.iterations);
+        
+        // Unlock editor before setting content
+        this.checkAndUpdateLockState(editor, false);
+        
+        editor.setValue(plainText);
+        new Notice('File decrypted successfully.');
+        
+        // Update lock state after content change
+        setTimeout(() => this.checkAndUpdateLockState(editor), 0);
+    } else {
+        // ENCRYPT ENTIRE FILE
+        const encryptedFile = await encryptText(fileContent, password, { iterations: this.settings.iterations });
+        
+        // Unlock editor before setting content
+        const cm6 = (editor as any).cm as EditorView;
+        if (cm6) {
+            cm6.dispatch({ effects: this.editorLock.reconfigure(EditorState.readOnly.of(false)) });
+        }
+        
+        editor.setValue(encryptedFile);
+        new Notice('File encrypted successfully.');
+    }
   }
+
+  // Password prompt functionality moved to PasswordService
 }

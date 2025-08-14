@@ -184,17 +184,18 @@ export async function decryptText(block: string, password: string, iterations: n
         throw new Error("Corrupted data: ciphertext too short");
     }
 
+    let decryptedBuffer: ArrayBuffer | null = null;
     try {
         const key = await deriveKey(password, salt, itersToUse);
         // Create new ArrayBuffers from the Uint8Arrays
         const ivBuffer = iv.slice().buffer;
         const ctBuffer = ct.slice().buffer;
-        const decrypted = await crypto.subtle.decrypt(
+        decryptedBuffer = await crypto.subtle.decrypt(
             { name: 'AES-GCM', iv: ivBuffer },
             key,
             ctBuffer
         );
-        return new TextDecoder().decode(decrypted);
+        return new TextDecoder().decode(decryptedBuffer);
     } catch (e) {
         // Log detailed error for diagnostics
         console.error('Decrypt error:', e);
@@ -204,7 +205,17 @@ export async function decryptText(block: string, password: string, iterations: n
         // Overwrite sensitive data with zeros when possible
         if (salt) new Uint8Array(salt).fill(0);
         if (iv) new Uint8Array(iv).fill(0);
-        // Note: ct is a view, can't be cleared directly
+        if (ct) new Uint8Array(ct.buffer).fill(0);
+        if (data) new Uint8Array(data.buffer).fill(0);
+        
+        // Clear any decoded data from memory
+        if (decryptedBuffer) {
+            new Uint8Array(decryptedBuffer).fill(0);
+        }
+        
+        // Note: The key object itself is managed by the browser's CryptoKey store
+        // and will be garbage collected, but we've ensured all our accessible
+        // sensitive data buffers are cleared
     }
 }
 

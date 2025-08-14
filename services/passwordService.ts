@@ -21,12 +21,6 @@ export class PasswordService {
         return this.passwordModalPromise;
     }
 
-    clearPassword(pwd: string | null): void {
-        if (pwd) {
-            // Overwrite the password string
-            pwd = null;
-        }
-    }
 }
 
 class PasswordPromptModal extends Modal {
