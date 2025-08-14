@@ -1,0 +1,18 @@
+.encrypted-block-widget {
+  cursor: pointer;
+  padding: 4px 12px;
+  background-color: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.encrypted-block-widget:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
