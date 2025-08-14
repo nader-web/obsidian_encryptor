@@ -31,6 +31,7 @@ not available in Community plugins
 5. if you dont select any text, the plugin will encrypt the entire file
 6. To decrypt, click the lock icon and enter the password you used to encrypt
 7. if you encrypt a block not in the start of the file, you must select it to decrypt it(i will try to fix this in the future)
+8. plugin lock editing for encrypted files
 
 ## Security Notes
 
