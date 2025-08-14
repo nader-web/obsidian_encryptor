@@ -1,13 +1,11 @@
 {
   "id": "secure-blocks",
   "name": "Secure Blocks",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "minAppVersion": "1.5.0",
   "description": "Encrypt/decrypt secure text blocks using AES-GCM directly in your Obsidian notes.",
   "author": "Nader",
   "authorUrl": "https://github.com/nader-web",
   "fundingUrl": "https://github.com/nader-web/obsidian-secure-blocks",
-  "isDesktopOnly": true,
-  "authorEmail": "contact@nader-web.com",
-  "donationUrl": "https://www.buymeacoffee.com/naderdev"
+  "isDesktopOnly": true
 }
