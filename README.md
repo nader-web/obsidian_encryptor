@@ -13,11 +13,7 @@ A secure encryption plugin for Obsidian that allows you to encrypt and decrypt t
 ## Installation
 
 ### From Obsidian
-
-1. Open Obsidian
-2. Go to Settings > Community plugins
-3. Search for "Secure Blocks"
-4. Click "Install" and then "Enable"
+not available in Community plugins
 
 ### Manual Installation
 
@@ -32,7 +28,9 @@ A secure encryption plugin for Obsidian that allows you to encrypt and decrypt t
 2. Click the lock icon in the ribbon or use the command palette
 3. Enter your encryption password when prompted
 4. The selected text will be replaced with an encrypted block
-5. To decrypt, click the lock icon on an encrypted block and enter your password
+5. if you dont select any text, the plugin will encrypt the entire file
+6. To decrypt, click the lock icon and enter the password you used to encrypt
+7. if you encrypt a block not in the start of the file, you must select it to decrypt it(i will try to fix this in the future)
 
 ## Security Notes
 
