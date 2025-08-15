@@ -1,7 +1,7 @@
 {
   "id": "secure-blocks",
   "name": "Secure Blocks",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.5.0",
   "description": "Encrypt/decrypt secure text blocks using AES-GCM directly in your Obsidian notes.",
   "author": "Nader",
